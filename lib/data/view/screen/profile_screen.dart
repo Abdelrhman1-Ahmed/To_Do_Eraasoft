@@ -1,79 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:todo_app/core/app_routes.dart';
+import 'package:todo_app/data/model/user_model.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen>createState()=>_ProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController fullName = TextEditingController();
 
   @override
+  void dispose() {
+    fullName.dispose();
+    super.dispose();
+  }
+
+  bool submitProfile() {
+    final name = fullName.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Enter your name')));
+      return false;
+    }
+
+    return true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF5F7FB),
-     
+      backgroundColor: Colors.white,
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.all(20),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(height: 100),
-            Container(
-              padding: const EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: const Color(0xffE8ECF5),
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: const Icon(
-                Icons.person,
-                size: 75,
-                color: Color(0xff3F51B5),
-              ),
+            const Icon(
+              Icons.person,
+              size: 60,
+              color: Color(0xff3F51B5),
             ),
-        
+            const SizedBox(height: 20),
             const Text(
-              "Create Your Profile",
+              'Create Your Profile',
               style: TextStyle(
-                fontSize: 30,
+                fontSize: 24,
                 fontWeight: FontWeight.w600,
                 color: Color(0xff1B1B21),
               ),
             ),
+            const SizedBox(height: 10),
             const Text(
-              "Add your name and profile picture",
+              'Add your name',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w300,
                 color: Color(0xff7D7D7E),
               ),
             ),
-            SizedBox(height: 5
-            ),
-            
-            SizedBox(height: 5),
+            const SizedBox(height: 20),
             CustomTextFormField(
-              label: "Full Name",
+              label: 'Full Name',
               controller: fullName,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return "Enter your name";
+                  return 'Enter your name';
                 }
                 return null;
               },
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 20),
             MaterialButton(
-              onPressed: () {},
-              color: const Color(0xff3F51B5),
-              padding: const EdgeInsets.all(10),
-              minWidth: 300,
+              onPressed: () async {
+                if (!submitProfile()) return;
+
+                final navigator = Navigator.of(context, rootNavigator: true);
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const AlertDialog(
+                    title: Text('Loading'),
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Please wait...'),
+                      ],
+                    ),
+                  ),
+                );
+
+                try {
+                  final userBox = Hive.box<UserModel>('User');
+                  await userBox.put(
+                    'UserKey',
+                    UserModel(fullName: fullName.text.trim()),
+                  );
+
+                  if (mounted) {
+                    navigator.pop();
+                    navigator.pushReplacementNamed(AppRoutes.home);
+                  }
+                } catch (error) {
+                  if (mounted) {
+                    navigator.pop();
+                  }
+                }
+              },
+              color: Colors.blue,
+              padding: const EdgeInsets.all(12),
+              minWidth: 250,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Text(
-                "Continue",
+                'Continue',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -103,22 +149,22 @@ class CustomTextFormField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: .start,
-      mainAxisSize: .max,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.max,
       children: [
         Text(
-            label,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w400,
-              color: Color(0xff1B1B21),
-            ),
+          label,
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w400,
+            color: Color(0xff1B1B21),
           ),
+        ),
         TextFormField(
           controller: controller,
           validator: validator,
           decoration: InputDecoration(
-            hintText: "Enter your Name",
+            hintText: 'Enter your full name',
             hintStyle: const TextStyle(color: Colors.grey),
             fillColor: Colors.white,
             filled: true,
